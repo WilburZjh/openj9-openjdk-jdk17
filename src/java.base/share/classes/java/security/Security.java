@@ -87,6 +87,7 @@ public final class Security {
         @SuppressWarnings("removal")
         var dummy = AccessController.doPrivileged(new PrivilegedAction<>() {
             public Void run() {
+                System.out.println("Start initializing...");
                 initialize();
                 return null;
             }
@@ -101,20 +102,25 @@ public final class Security {
         // first load the system properties file
         // to determine the value of security.overridePropertiesFile
         File propFile = securityPropFile("java.security");
+        System.out.println("propFile is: " + propFile.getName());
         if (propFile.exists()) {
+            System.out.println("propFile exists.");
             InputStream is = null;
             try {
                 FileInputStream fis = new FileInputStream(propFile);
                 is = new BufferedInputStream(fis);
                 props.load(is);
                 loadedProps = true;
-
+                System.out.println("propFile exists. Now check sdebug...");
                 if (sdebug != null) {
+                    System.out.println("sde is not null.");
                     sdebug.println("reading security properties file: " +
                                 propFile);
                 }
             } catch (IOException e) {
+                System.out.println("propFile exists has some exception. Now check sdebug...");
                 if (sdebug != null) {
+                    System.out.println("sde is not null.");
                     sdebug.println("unable to load security properties from " +
                                 propFile);
                     e.printStackTrace();
@@ -214,8 +220,12 @@ public final class Security {
 /*[ENDIF] CRIU_SUPPORT*/
 
         // Load FIPS properties
+        System.out.println("Loading FIPS properties...");
+        System.out.println("loadedProps is: " + loadedProps);
         if (loadedProps) {
             boolean fipsEnabled = FIPSConfigurator.configureFIPS(props);
+            System.out.println("fipsEnabled is: " + fipsEnabled);
+            System.out.println("sdebug is: " + sdebug);
             if (sdebug != null) {
                 if (fipsEnabled) {
                     sdebug.println("FIPS mode enabled.");

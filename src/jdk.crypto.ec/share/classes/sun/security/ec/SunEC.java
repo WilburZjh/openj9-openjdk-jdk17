@@ -256,6 +256,7 @@ public final class SunEC extends Provider {
             "EC", "sun.security.util.ECParameters", apAttrs));
 
         if (FIPSConfigurator.enableFips()) {
+            System.out.println("FIPS is enabled.");
             return;
         }
 

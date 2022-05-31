@@ -84,6 +84,9 @@ public final class FIPSConfigurator {
         boolean loadedProps = false;
 
         // Check if FIPS is supported on this platform.
+        System.out.println("userEnabledFIPS: " + userEnabledFIPS);
+        System.out.println("isFIPSSupported: " + isFIPSSupported);
+        System.out.println("shouldEnableFIPS: " + shouldEnableFIPS);
         if (userEnabledFIPS && !isFIPSSupported) {
             throw new RuntimeException("FIPS is not supported on this platform.");
         }
