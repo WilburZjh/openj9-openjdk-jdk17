@@ -268,7 +268,7 @@ final class P11Signature extends SignatureSpi {
             if (session == null) {
                 return;
             }
-
+            System.out.println("doCancel: " + doCancel);
             if (doCancel && token.explicitCancel) {
                 cancelOperation();
             }
@@ -283,53 +283,94 @@ final class P11Signature extends SignatureSpi {
         // cancel operation by finishing it; avoid killSession as some
         // hardware vendors may require re-login
         try {
+            System.out.println("cancelOperation1 mode: " + mode);
             if (mode == M_SIGN) {
+                System.out.println("cancelOperation2 type: " + type);
+                System.out.println("cancelOperation2 T_UPDATE: " + T_UPDATE);
                 if (type == T_UPDATE) {
+                    System.out.println("cancelOperation3");
                     token.p11.C_SignFinal(session.id(), 0);
+                    System.out.println("cancelOperation4");
                 } else {
                     byte[] digest;
+                    System.out.println("cancelOperation5 type: " + type);
+                    System.out.println("cancelOperation5 T_DIGEST: " + T_DIGEST);
                     if (type == T_DIGEST) {
+                        System.out.println("cancelOperation6");
                         digest = md.digest();
+                        System.out.println("cancelOperation7");
                     } else { // T_RAW
+                        System.out.println("cancelOperation8");
                         digest = buffer;
+                        System.out.println("cancelOperation9");
                     }
+                    System.out.println("cancelOperation10");
                     token.p11.C_Sign(session.id(), digest);
+                    System.out.println("cancelOperation11");
                 }
             } else { // M_VERIFY
                 byte[] signature;
+                System.out.println("cancelOperation12 mechanism: " + mechanism);
+                System.out.println("cancelOperation12 CKM_DSA: " + CKM_DSA);
                 if (mechanism == CKM_DSA) {
+                    System.out.println("cancelOperation13");
                     signature = new byte[64]; // assume N = 256
+                    System.out.println("cancelOperation14");
                 } else {
+                    System.out.println("cancelOperation15 p11key length: " + p11Key.length());
                     signature = new byte[(p11Key.length() + 7) >> 3];
+                    System.out.println("cancelOperation16");
                 }
+                System.out.println("cancelOperation17 type: " + type);
+                System.out.println("cancelOperation18 T_UPDATE: " + T_UPDATE);
                 if (type == T_UPDATE) {
+                    System.out.println("cancelOperation19");
                     token.p11.C_VerifyFinal(session.id(), signature);
+                    System.out.println("cancelOperation20");
                 } else {
                     byte[] digest;
+                    System.out.println("cancelOperation21 type: " + type);
+                    System.out.println("cancelOperation22 T_DIGEST: " + T_DIGEST);
                     if (type == T_DIGEST) {
+                        System.out.println("cancelOperation23");
                         digest = md.digest();
+                        System.out.println("cancelOperation24");
                     } else { // T_RAW
+                        System.out.println("cancelOperation25");
                         digest = buffer;
+                        System.out.println("cancelOperation26");
                     }
+                    System.out.println("cancelOperation27");
                     token.p11.C_Verify(session.id(), digest, signature);
+                    System.out.println("cancelOperation28");
                 }
             }
         } catch (PKCS11Exception e) {
+            System.out.println("cancelOperation catch exception e.getErrorCode: " + e.getErrorCode());
+            System.out.println("cancelOperation catch exception CKR_OPERATION_NOT_INITIALIZED: " + CKR_OPERATION_NOT_INITIALIZED);
             if (e.getErrorCode() == CKR_OPERATION_NOT_INITIALIZED) {
                 // Cancel Operation may be invoked after an error on a PKCS#11
                 // call. If the operation inside the token was already cancelled,
                 // do not fail here. This is part of a defensive mechanism for
                 // PKCS#11 libraries that do not strictly follow the standard.
+                System.out.println("CKR_OPERATION_NOT_INITIALIZED!!!!");
                 return;
             }
+            System.out.println("cancelOperation catch exception mode: " + mode);
+            System.out.println("cancelOperation catch exception M_VERIFY: " + M_VERIFY);
             if (mode == M_VERIFY) {
+                System.out.println("cancelOperation catch exception CKR_SIGNATURE_INVALID: " + CKR_SIGNATURE_INVALID);
+                System.out.println("cancelOperation catch exception CKR_SIGNATURE_LEN_RANGE: " + CKR_SIGNATURE_LEN_RANGE);
                 long errorCode = e.getErrorCode();
+                System.out.println("cancelOperation catch exception errorCode: " + errorCode);
                 if ((errorCode == CKR_SIGNATURE_INVALID) ||
-                     (errorCode == CKR_SIGNATURE_LEN_RANGE)) {
+                     (errorCode == CKR_SIGNATURE_INVALID)) {
+                     System.out.println("CKR_SIGNATURE_INVALID or CKR_SIGNATURE_INVALID!!!!");
                      // expected since signature is incorrect
                      return;
                 }
             }
+            System.out.println("cancel failed, e: " + e);
             throw new ProviderException("cancel failed", e);
         }
     }
@@ -683,20 +724,32 @@ final class P11Signature extends SignatureSpi {
         ensureInitialized();
         boolean doCancel = true;
         try {
+            System.out.println("engineVerify1");
             if (!p1363Format) {
+                System.out.println("engineVerify2");
                 if (keyAlgorithm.equals("DSA")) {
+                    System.out.println("engineVerify3 keyAlgorithm: " + keyAlgorithm);
                     signature = asn1ToDSA(signature);
+                    System.out.println("engineVerify3 signature: " + signature.toString());
                 } else if (keyAlgorithm.equals("EC")) {
+                    System.out.println("engineVerify4 keyAlgorithm: " + keyAlgorithm);
                     signature = asn1ToECDSA(signature);
+                    System.out.println("engineVerify4 signature: " + signature.toString());
                 }
             }
+            System.out.println("engineVerify5 type: " + type);
             if (type == T_UPDATE) {
+                System.out.println("engineVerify6");
                 token.p11.C_VerifyFinal(session.id(), signature);
+                System.out.println("engineVerify7");
             } else {
                 byte[] digest;
                 if (type == T_DIGEST) {
+                    System.out.println("engineVerify8");
                     digest = md.digest();
+                    System.out.println("engineVerify9");
                 } else { // T_RAW
+                    System.out.println("engineVerify10 mechanism: " + mechanism);
                     if (mechanism == CKM_DSA) {
                         if (bytesProcessed != buffer.length) {
                             throw new SignatureException
@@ -712,9 +765,12 @@ final class P11Signature extends SignatureSpi {
                         System.arraycopy(buffer, 0, digest, 0, bytesProcessed);
                     }
                 }
+                System.out.println("engineVerify11 keyAlgorithm: " + keyAlgorithm);
                 if (keyAlgorithm.equals("RSA") == false) {
                     // DSA and ECDSA
+                    System.out.println("engineVerify12");
                     token.p11.C_Verify(session.id(), digest, signature);
+                    System.out.println("engineVerify13");
                 } else { // RSA
                     byte[] data = encodeSignature(digest);
                     if (mechanism == CKM_RSA_X_509) {
@@ -728,6 +784,10 @@ final class P11Signature extends SignatureSpi {
         } catch (PKCS11Exception pe) {
             doCancel = false;
             long errorCode = pe.getErrorCode();
+            System.out.println("engineVerify-catch1 errorCode: " + errorCode);
+            System.out.println("engineVerify-catch1 CKR_SIGNATURE_INVALID: " + CKR_SIGNATURE_INVALID);
+            System.out.println("engineVerify-catch1 CKR_SIGNATURE_LEN_RANGE: " + CKR_SIGNATURE_LEN_RANGE);
+            System.out.println("engineVerify-catch1 CKR_DATA_LEN_RANGE: " + CKR_DATA_LEN_RANGE);
             if (errorCode == CKR_SIGNATURE_INVALID) {
                 return false;
             }
@@ -741,8 +801,10 @@ final class P11Signature extends SignatureSpi {
             }
             throw new ProviderException(pe);
         }  catch (SignatureException | ProviderException e) {
+            System.out.println("engineVerify-catch SignatureException & ProviderException.");
             throw e;
         } finally {
+            System.out.println("comes to finally");
             reset(doCancel);
         }
     }
@@ -812,25 +874,41 @@ final class P11Signature extends SignatureSpi {
     private static byte[] asn1ToDSA(byte[] sig) throws SignatureException {
         try {
             // Enforce strict DER checking for signatures
+            System.out.println("sig: " + sig.toString());
+            System.out.println("sig.length: " + sig.length);
             DerInputStream in = new DerInputStream(sig, 0, sig.length, false);
+            System.out.println("pass-DerInputStream-in");
             DerValue[] values = in.getSequence(2);
+            System.out.println("pass-DerInputStream-in-getSquence");
 
             // check number of components in the read sequence
             // and trailing data
             if ((values.length != 2) || (in.available() != 0)) {
+                System.out.println("Inside block!");
                 throw new IOException("Invalid encoding for signature");
             }
 
             BigInteger r = values[0].getPositiveBigInteger();
+            System.out.println("After r getPositiveBigInteger!");
             BigInteger s = values[1].getPositiveBigInteger();
-
+            System.out.println("After s getPositiveBigInteger!");
+            System.out.print("r: " + r.toString());
+            System.out.print("s: " + s.toString());
             byte[] br = toByteArray(r, 20);
+            if(br == null) {
+                System.out.println("br is null");
+            }
             byte[] bs = toByteArray(s, 20);
+            if(bs == null) {
+                System.out.println("bs is null");
+            }
             if ((br == null) || (bs == null)) {
+                System.out.println("From here1");
                 throw new SignatureException("Out of range value for R or S");
             }
             return P11Util.concat(br, bs);
         } catch (SignatureException e) {
+            System.out.println("From here2");
             throw e;
         } catch (Exception e) {
             throw new SignatureException("Invalid encoding for signature", e);
