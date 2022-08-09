@@ -503,7 +503,7 @@ final class P11AEADCipher extends CipherSpi {
         } else {
             // In earlier NSS versions, AES_GCM would report
             // CKR_BUFFER_TOO_SMALL error if minus tagLen
-            if (type == Transformation.CHACHA20_POLY1305) {
+            if (type == Transformation.CHACHA20_POLY1305 || type == Transformation.AES_GCM) {
                 result -= tagLen;
             }
         }
@@ -665,6 +665,7 @@ final class P11AEADCipher extends CipherSpi {
             throws ShortBufferException, IllegalBlockSizeException,
             BadPaddingException {
         int requiredOutLen = doFinalLength(inLen);
+        System.out.println("inLen is: " + inLen + ", outLen is: " + outLen + ", requireOutLen is: " + requiredOutLen);
         if (outLen < requiredOutLen) {
             throw new ShortBufferException();
         }
@@ -672,7 +673,9 @@ final class P11AEADCipher extends CipherSpi {
         boolean doCancel = true;
         try {
             ensureInitialized();
+            System.out.println("dataBuffer size is: " + dataBuffer.size());
             if (dataBuffer.size() > 0) {
+                System.out.println("inOfs is: " + inOfs + ", inLen is: " + inLen +", in length is: " + in.length);
                 if (in != null && inOfs > 0 && inLen > 0 &&
                     inOfs < (in.length - inLen)) {
                     dataBuffer.write(in, inOfs, inLen);
@@ -683,16 +686,21 @@ final class P11AEADCipher extends CipherSpi {
             }
             int k = 0;
             if (encrypt) {
+                System.out.println("Start encrypt...");
                 k = token.p11.C_Encrypt(session.id(), 0, in, inOfs, inLen,
                         0, out, outOfs, outLen);
+                System.out.println("get k...");
                 doCancel = false;
             } else {
+                System.out.println("Start decrypt...");
+                System.out.println("inLen is: " + inLen);
                 // Special handling to match SunJCE provider behavior
                 if (inLen == 0) {
                     return 0;
                 }
                 k = token.p11.C_Decrypt(session.id(), 0, in, inOfs, inLen,
                         0, out, outOfs, outLen);
+                System.out.println("get k...");
                 doCancel = false;
             }
             return k;
