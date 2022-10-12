@@ -51,7 +51,7 @@ public class ReinitMac extends PKCS11Test {
         Random random = new Random();
         byte[] data = new byte[10 * 1024];
         random.nextBytes(data);
-        byte[] keyVal = new byte[16];
+        byte[] keyVal = new byte[48];
         random.nextBytes(keyVal);
 
         boolean success = true;

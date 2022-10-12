@@ -48,7 +48,7 @@ public class MacSameTest extends PKCS11Test {
 
     private static final int MESSAGE_SIZE = 25;
     private static final int OFFSET = 5;
-    private static final int KEY_SIZE = 128;
+    private static final int KEY_SIZE = 384;
 
     /**
      * Initialize a message, instantiate a Mac object,
