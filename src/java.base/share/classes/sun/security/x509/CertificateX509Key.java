@@ -72,6 +72,7 @@ public class CertificateX509Key implements CertAttrSet<String> {
      */
     public CertificateX509Key(DerInputStream in) throws IOException {
         DerValue val = in.getDerValue();
+        System.out.println("CertificateX509Key -> CertificateX509Key: " + val.toString());
         key = X509Key.parse(val);
     }
 

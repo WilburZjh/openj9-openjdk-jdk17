@@ -168,6 +168,7 @@ public class X509Key implements PublicKey {
 
         algorithm = AlgorithmId.parse(in.data.getDerValue());
         try {
+            System.out.println("X509Key -> parse -> algorithm: "+ algorithm);
             subjectKey = buildX509Key(algorithm,
                                       in.data.getUnalignedBitString());
 

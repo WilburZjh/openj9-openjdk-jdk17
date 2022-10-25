@@ -56,6 +56,7 @@ final class P11RSAKeyFactory extends P11KeyFactory {
         try {
             if (key instanceof RSAPublicKey) {
                 RSAPublicKey rsaKey = (RSAPublicKey)key;
+                System.out.println("P11RSAKeyFactory.java -> (RSAPublicKey)key -> rsaKey.getModulus(): " + rsaKey.getModulus().toString() + ", rsaKey.getPublicExponent(): " + rsaKey.getPublicExponent().toString());
                 return generatePublic(
                     rsaKey.getModulus(),
                     rsaKey.getPublicExponent()

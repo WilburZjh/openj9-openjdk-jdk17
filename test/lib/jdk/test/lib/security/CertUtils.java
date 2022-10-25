@@ -31,6 +31,7 @@
 package jdk.test.lib.security;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -431,6 +432,15 @@ public class CertUtils {
         try {
             CertificateFactory certFactory
                     = CertificateFactory.getInstance("X.509");
+
+            ByteArrayOutputStream result = new ByteArrayOutputStream();
+            byte[] buffer = new byte[8192];
+            int length;
+            while ((length = input.read(buffer)) != -1) {
+                result.write(buffer, 0, length);
+            }
+            System.out.println("InputStream is: " + result.toString());
+
             return (X509Certificate) certFactory.generateCertificate(input);
         } finally {
             if (input != null) {

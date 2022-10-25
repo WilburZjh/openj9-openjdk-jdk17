@@ -97,6 +97,12 @@ public class X509Factory extends CertificateFactorySpi {
         }
         try {
             byte[] encoding = readOneBlock(is);
+            System.out.println("X509Factory -> engineGenerateCertificate");
+            System.out.println("The size of one block of certificate is: "+encoding.length);
+            for(int i=0; i<encoding.length; i++) {
+                System.out.print(encoding[i]+"-");
+            }
+            System.out.println();
             if (encoding != null) {
                 X509CertImpl cert = getFromCache(certCache, encoding);
                 if (cert != null) {

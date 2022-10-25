@@ -812,8 +812,10 @@ abstract class P11Key implements Key, Length {
             if (encoded == null) {
                 fetchValues();
                 try {
+                    System.out.println("P11Key.java -> P11RSAPublicKey -> getEncodedInternal -> create a new RSAPublicKey.");
                     encoded = RSAPublicKeyImpl.newKey
                         (KeyType.RSA, null, n, e).getEncoded();
+                    System.out.println("P11Key.java -> P11RSAPublicKey -> getEncodedInternal -> RSAPublicKey is created.");
                 } catch (InvalidKeyException e) {
                     throw new ProviderException(e);
                 }

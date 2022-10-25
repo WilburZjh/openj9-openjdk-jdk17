@@ -1782,6 +1782,7 @@ public class X509CertImpl extends X509Certificate implements DerEncoder {
             throw new CertificateParsingException("signed fields overrun");
 
         // The CertificateInfo
+        System.out.println("X509CertImpl -> seq[0] is: " + seq[0].toString());
         info = new X509CertInfo(seq[0]);
 
         // the "inner" and "outer" signature algorithms must match

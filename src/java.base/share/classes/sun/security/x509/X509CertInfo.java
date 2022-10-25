@@ -638,7 +638,7 @@ public class X509CertInfo implements CertAttrSet<String> {
         rawCertInfo = val.toByteArray();
 
         in = val.data;
-
+        System.out.println("X509CertInfo -> parse: " + in.toString());
         // Version
         tmp = in.getDerValue();
         if (tmp.isContextSpecific((byte)0)) {
