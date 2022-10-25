@@ -789,6 +789,7 @@ abstract class P11Key implements Key, Length {
         P11RSAPublicKey(Session session, long keyID, String algorithm,
                 int keyLength, CK_ATTRIBUTE[] attributes) {
             super(PUBLIC, session, keyID, algorithm, keyLength, attributes);
+            System.out.println("P11Key.java -> P11RSAPublicKey");
         }
         private synchronized void fetchValues() {
             token.ensureValid();

@@ -332,6 +332,7 @@ final class P11KeyPairGenerator extends KeyPairGeneratorSpi {
         CK_ATTRIBUTE[] privateKeyTemplate;
         long keyType;
         if (algorithm.equals("RSA")) {
+            System.out.println("algorithm is: " + algorithm);
             keyType = CKK_RSA;
             publicKeyTemplate = new CK_ATTRIBUTE[] {
                 new CK_ATTRIBUTE(CKA_MODULUS_BITS, keySize),
@@ -405,6 +406,7 @@ final class P11KeyPairGenerator extends KeyPairGeneratorSpi {
         }
         Session session = null;
         try {
+            System.out.println("try-catch the generateKeyPair");
             session = token.getObjSession();
             publicKeyTemplate = token.getAttributes
                 (O_GENERATE, CKO_PUBLIC_KEY, keyType, publicKeyTemplate);
