@@ -176,14 +176,19 @@ public class PKCS11 {
         // into the PKCS11 device.
         public synchronized long C_CreateObject(long hSession, CK_ATTRIBUTE[] pTemplate) throws PKCS11Exception {
             if ((mysunpkcs11 != null) && isKey(pTemplate)) {
+                System.out.println("Create P11 object...");
                 try {
+                    System.out.println("getDeclaredMethod");
                     Method method = mysunpkcs11.getClass().getDeclaredMethod("importKey", long.class, CK_ATTRIBUTE[].class);
+                    System.out.println("setAccessible");
                     method.setAccessible(true);
+                    System.out.println("return");
                     return (Long)method.invoke(mysunpkcs11, hSession, pTemplate);
                 } catch (InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
                     throw new PKCS11Exception(CKR_GENERAL_ERROR, null);
                 }
             }
+            System.out.println("Create object...");
             return super.C_CreateObject(hSession, pTemplate);
         }
     }

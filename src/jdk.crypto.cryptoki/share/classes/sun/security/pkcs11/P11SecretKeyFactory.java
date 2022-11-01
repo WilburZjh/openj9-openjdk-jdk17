@@ -142,10 +142,15 @@ final class P11SecretKeyFactory extends SecretKeyFactorySpi {
         long algoType;
         if (algo == null) {
             algo = key.getAlgorithm();
+            System.out.println("algo is null, so key.getAlgorithm is: " + algo);
             algoType = getKeyType(algo);
+            System.out.println("algo is null, so getKeyType is: " + algoType);
         } else {
             algoType = getKeyType(algo);
+            System.out.println("algo is not null, so getKeyType is: " + algoType);
             long keyAlgorithmType = getKeyType(key.getAlgorithm());
+            System.out.println("algo is not null, so key.getAlgorithm is: " + key.getAlgorithm());
+            System.out.println("keyAlgorithmType is: " + keyAlgorithmType);
             if (algoType != keyAlgorithmType) {
                 if ((algoType == PCKK_HMAC) || (algoType == PCKK_SSLMAC)) {
                     // ignore key algorithm for MACs
@@ -156,16 +161,20 @@ final class P11SecretKeyFactory extends SecretKeyFactorySpi {
             }
         }
         if (key instanceof P11Key) {
+            System.out.println("key is an instance of P11Key");
             P11Key p11Key = (P11Key)key;
             if (p11Key.token == token) {
                 if (extraAttrs != null) {
                     P11Key newP11Key = null;
                     Session session = null;
                     long p11KeyID = p11Key.getKeyID();
+                    System.out.println("p11KeyID is: " + p11KeyID);
                     try {
                         session = token.getObjSession();
+                        System.out.println("copying object...");
                         long newKeyID = token.p11.C_CopyObject(session.id(),
                             p11KeyID, extraAttrs);
+                        System.out.println("invoking secretKey...");
                         newP11Key = (P11Key) (P11Key.secretKey(session,
                                 newKeyID, p11Key.algorithm, p11Key.keyLength,
                                 extraAttrs));
@@ -185,12 +194,17 @@ final class P11SecretKeyFactory extends SecretKeyFactorySpi {
         if (p11Key != null) {
             return p11Key;
         }
+        System.out.println("key.getFormat is: " + key.getFormat());
         if ("RAW".equalsIgnoreCase(key.getFormat()) == false) {
             throw new InvalidKeyException("Encoded format must be RAW");
         }
+        System.out.println("encoding key...");
         byte[] encoded = key.getEncoded();
+        System.out.println("Creating key...");
         p11Key = createKey(token, encoded, algo, algoType, extraAttrs);
+        System.out.println("put key into cache...");
         token.secretCache.put(key, p11Key);
+        System.out.println("p11Key.getFormat is: " + p11Key.getFormat());
         return p11Key;
     }
 
@@ -227,8 +241,10 @@ final class P11SecretKeyFactory extends SecretKeyFactorySpi {
                     }
                     break;
                 case (int)CKK_AES:
+                    System.out.println("CKK_AES is: " + (int)CKK_AES);
                     keyLength =
                         P11KeyGenerator.checkKeySize(CKM_AES_KEY_GEN, n, token);
+                    System.out.println("keyLength is: " + keyLength);
                     break;
                 case (int)CKK_RC4:
                     keyLength =
@@ -271,6 +287,7 @@ final class P11SecretKeyFactory extends SecretKeyFactorySpi {
         try {
             CK_ATTRIBUTE[] attributes;
             if (extraAttrs != null) {
+                System.out.println("extraAttrs is not null.");
                 attributes = new CK_ATTRIBUTE[3 + extraAttrs.length];
                 System.arraycopy(extraAttrs, 0, attributes, 3,
                         extraAttrs.length);
@@ -283,9 +300,12 @@ final class P11SecretKeyFactory extends SecretKeyFactorySpi {
             attributes = token.getAttributes
                 (O_IMPORT, CKO_SECRET_KEY, keyType, attributes);
             session = token.getObjSession();
+            System.out.println("Invoking C_CreateObject...");
             long keyID = token.p11.C_CreateObject(session.id(), attributes);
+            System.out.println("Invoking (P11Key)P11Key.secretKey...");
             P11Key p11Key = (P11Key)P11Key.secretKey
                 (session, keyID, algorithm, keyLength, attributes);
+            System.out.println("p11Key format is: " + p11Key.getFormat());
             return p11Key;
         } catch (PKCS11Exception e) {
             throw new InvalidKeyException("Could not create key", e);
@@ -373,6 +393,7 @@ final class P11SecretKeyFactory extends SecretKeyFactorySpi {
     // see JCE spec
     protected SecretKey engineTranslateKey(SecretKey key)
             throws InvalidKeyException {
+        System.out.println("algorithm in P11SecretKeyFactory is: " + algorithm);
         return (SecretKey)convertKey(token, key, algorithm);
     }
 
