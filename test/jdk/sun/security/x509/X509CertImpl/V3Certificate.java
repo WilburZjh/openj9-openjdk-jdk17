@@ -73,8 +73,13 @@ public class V3Certificate {
 
         boolean success = true;
 
+        System.out.println("Testing SHA256withRSA ...");
         success &= test("RSA", "SHA256withRSA", 2048);
+
+        System.out.println("Testing SHA256withDSA ...");
         success &= test("DSA", "SHA256withDSA", 2048);
+
+        System.out.println("Testing SHA256withECDSA ...");
         success &= test("EC", "SHA256withECDSA", 384);
 
         if (!success) {
@@ -211,6 +216,7 @@ public class V3Certificate {
         exts.set(PolicyConstraintsExtension.NAME, pce);
         cert.set(X509CertInfo.EXTENSIONS, exts);
 
+        System.out.println("Cert info is: " + cert.toString());
         // Generate and sign X509CertImpl
         X509CertImpl crt = new X509CertImpl(cert);
         crt.sign(privateKey, sigAlg);
