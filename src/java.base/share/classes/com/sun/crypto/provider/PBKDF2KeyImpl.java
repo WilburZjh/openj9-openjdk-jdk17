@@ -120,7 +120,7 @@ final class PBKDF2KeyImpl implements javax.crypto.interfaces.PBEKey {
             } else if (keyLength < 0) {
                 throw new InvalidKeySpecException("Key length is negative");
             }
-            this.prf = Mac.getInstance(prfAlgo);
+                this.prf = Mac.getInstance(prfAlgo);
             this.key = deriveKey(prf, passwdBytes, salt, iterCount, keyLength);
         } catch (NoSuchAlgorithmException nsae) {
             // not gonna happen; re-throw just in case
@@ -182,6 +182,7 @@ final class PBKDF2KeyImpl implements javax.crypto.interfaces.PBEKey {
                         MessageDigest.isEqual(password, sk.getEncoded());
                 }
             };
+            System.out.println("prf provider is: " + prf.getProvider().getName());
             prf.init(macKey);
 
             byte[] ibytes = new byte[4];
