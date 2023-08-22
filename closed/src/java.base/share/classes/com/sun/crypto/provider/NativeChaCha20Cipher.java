@@ -91,6 +91,7 @@ abstract class NativeChaCha20Cipher extends CipherSpi {
 
     private static final NativeCrypto nativeCrypto;
     private static final Cleaner contextCleaner;
+    private int prevMode = -1;
     private final long context;
 
     private final ByteArrayOutputStream aadBuf;
@@ -600,7 +601,14 @@ abstract class NativeChaCha20Cipher extends CipherSpi {
         aadDone = false;
         initialized = true;
 
-        int ret = nativeCrypto.ChaCha20Init(context, ossl_mode, openssl_iv, openssl_iv.length, keyBytes, keyBytes.length);
+        // for optimizing the initialization of chacha20 when they have the same ossl_mode
+        // otherwise, we have to do the expensive reinitialized based upon the ossl_mode.
+        if (prevMode == ossl_mode) {
+            int ret = nativeCrypto.ChaCha20Init(context, ossl_mode, openssl_iv, openssl_iv.length, keyBytes, keyBytes.length, true);
+        } else {
+            int ret = nativeCrypto.ChaCha20Init(context, ossl_mode, openssl_iv, openssl_iv.length, keyBytes, keyBytes.length, false);
+            prevMode = ossl_mode;
+        }
     }
 
     /**
