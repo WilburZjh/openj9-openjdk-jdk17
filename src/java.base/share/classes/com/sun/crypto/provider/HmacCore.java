@@ -65,6 +65,7 @@ abstract class HmacCore extends MacSpi implements Cloneable {
      * a MessageDigest of the specified name.
      */
     HmacCore(String digestAlgo, int bl) throws NoSuchAlgorithmException {
+        System.out.println("HmacCore -> constructor -> digestAlgo is: " + digestAlgo);
         MessageDigest md = MessageDigest.getInstance(digestAlgo);
         if (!(md instanceof Cloneable)) {
             // use SUN provider if the most preferred one does not support
@@ -110,6 +111,7 @@ abstract class HmacCore extends MacSpi implements Cloneable {
      * @return the HMAC length in bytes.
      */
     protected int engineGetMacLength() {
+        System.out.println("HmacCore -> engineGetMacLength -> length of HMAC in bytes is: " + this.md.getDigestLength());
         return this.md.getDigestLength();
     }
 

@@ -122,13 +122,13 @@ final class PBKDF2KeyImpl implements javax.crypto.interfaces.PBEKey {
             } else if (keyLength < 0) {
                 throw new InvalidKeySpecException("Key length is negative");
             }
-            // if (RestrictedSecurity.isFIPSEnabled()) {
-            //     this.prf = Mac.getInstance(prfAlgo);
-            // } else {
-            //     this.prf = Mac.getInstance(prfAlgo, SunJCE.getInstance());
-            // }
+            if (RestrictedSecurity.isFIPSEnabled()) {
+                this.prf = Mac.getInstance(prfAlgo);
+            } else {
+                this.prf = Mac.getInstance(prfAlgo, SunJCE.getInstance());
+            }
             System.out.println("PBKDF2KeyImpl -> prfAlgo is: " + prfAlgo);
-            this.prf = Mac.getInstance(prfAlgo, SunJCE.getInstance());
+            // this.prf = Mac.getInstance(prfAlgo, SunJCE.getInstance());
             this.key = deriveKey(prf, passwdBytes, salt, iterCount, keyLength);
         } catch (NoSuchAlgorithmException nsae) {
             // not gonna happen; re-throw just in case
@@ -155,6 +155,7 @@ final class PBKDF2KeyImpl implements javax.crypto.interfaces.PBEKey {
         byte[] key = new byte[keyLength];
         try {
             int hlen = prf.getMacLength();
+            System.out.println("PBKDF2KeyImpl -> deriveKey -> hlen is: " + hlen);
             int intL = (keyLength + hlen - 1)/hlen; // ceiling
             int intR = keyLength - (intL - 1)*hlen; // residue
             byte[] ui = new byte[hlen];

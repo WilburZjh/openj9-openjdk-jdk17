@@ -174,6 +174,7 @@ abstract class P11Key implements Key, Length {
     // see JCA spec
     public final byte[] getEncoded() {
         byte[] b = getEncodedInternal();
+        System.out.println("P11Key->getEncoded()->b is: " + new String(b));
         return (b == null) ? null : b.clone();
     }
 
