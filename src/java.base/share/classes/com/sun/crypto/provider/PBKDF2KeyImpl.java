@@ -165,14 +165,17 @@ final class PBKDF2KeyImpl implements javax.crypto.interfaces.PBEKey {
                 private static final long serialVersionUID = 7874493593505141603L;
                 @Override
                 public String getAlgorithm() {
+                    System.out.println("PBKDF2KeyImpl -> deriveKey -> getAlgorithm -> prf algorithm is: " + prf.getAlgorithm());
                     return prf.getAlgorithm();
                 }
                 @Override
                 public String getFormat() {
+                    System.out.println("PBKDF2KeyImpl -> deriveKey -> getFormat -> SecretKey format is: " + "RAW");
                     return "RAW";
                 }
                 @Override
                 public byte[] getEncoded() {
+                    System.out.println("PBKDF2KeyImpl -> deriveKey -> getEncoded -> password is: " + new String(password));
                     return password.clone();
                 }
                 @Override

@@ -121,6 +121,7 @@ final class P11SecretKeyFactory extends SecretKeyFactorySpi {
      */
     static P11Key convertKey(Token token, Key key, String algo)
             throws InvalidKeyException {
+        System.out.println("P11SecretKeyFactory -> convertKey(Token token, Key key, String algo)");
         return convertKey(token, key, algo, null);
     }
 
@@ -132,6 +133,7 @@ final class P11SecretKeyFactory extends SecretKeyFactorySpi {
     static P11Key convertKey(Token token, Key key, String algo,
             CK_ATTRIBUTE[] extraAttrs)
             throws InvalidKeyException {
+        System.out.println("P11SecretKeyFactory -> convertKey(Token token, Key key, String algo, CK_ATTRIBUTE[] extraAttrs), but extraAttrs is null.");
         token.ensureValid();
         if (key == null) {
             throw new InvalidKeyException("Key must not be null");
@@ -141,13 +143,27 @@ final class P11SecretKeyFactory extends SecretKeyFactorySpi {
         }
         long algoType;
         if (algo == null) {
+            System.out.println("P11SecretKeyFactory -> convertKey -> algo is null.");
             algo = key.getAlgorithm();
+            System.out.println("P11SecretKeyFactory -> convertKey -> algo is null -> algo is: " + algo);
             algoType = getKeyType(algo);
+            System.out.println("P11SecretKeyFactory -> convertKey -> algo is null -> algoType is: " + algoType);
         } else {
+            System.out.println("P11SecretKeyFactory -> convertKey -> algo is not null -> algo is: " + algo);
             algoType = getKeyType(algo);
+            System.out.println("P11SecretKeyFactory -> convertKey -> algo is not null -> algoType is: " + algoType);
             long keyAlgorithmType = getKeyType(key.getAlgorithm());
+            System.out.println("P11SecretKeyFactory -> convertKey -> algo is not null -> key.getAlgorithm() is: " + key.getAlgorithm());
+            System.out.println("P11SecretKeyFactory -> convertKey -> algo is not null -> keyAlgorithmType is: " + keyAlgorithmType);
             if (algoType != keyAlgorithmType) {
+                System.out.println("P11SecretKeyFactory -> convertKey -> algo is not null -> (algoType != keyAlgorithmType)");
                 if ((algoType == PCKK_HMAC) || (algoType == PCKK_SSLMAC)) {
+                    if(algoType == PCKK_HMAC) {
+                        System.out.println("P11SecretKeyFactory -> convertKey -> algo is not null -> (algoType != keyAlgorithmType) -> algoType == PCKK_HMAC");
+                    }
+                    if(algoType == PCKK_SSLMAC) {
+                        System.out.println("P11SecretKeyFactory -> convertKey -> algo is not null -> (algoType != keyAlgorithmType) -> algoType == PCKK_SSLMAC");
+                    }
                     // ignore key algorithm for MACs
                 } else {
                     throw new InvalidKeyException
@@ -156,6 +172,7 @@ final class P11SecretKeyFactory extends SecretKeyFactorySpi {
             }
         }
         if (key instanceof P11Key) {
+            System.out.println("P11SecretKeyFactory -> convertKey -> key instanceof P11Key.");
             P11Key p11Key = (P11Key)key;
             if (p11Key.token == token) {
                 if (extraAttrs != null) {
@@ -181,6 +198,7 @@ final class P11SecretKeyFactory extends SecretKeyFactorySpi {
                 return p11Key;
             }
         }
+        System.out.println("P11SecretKeyFactory -> convertKey -> key is not an instanceof P11Key.");
         P11Key p11Key = token.secretCache.get(key);
         if (p11Key != null) {
             return p11Key;
@@ -189,6 +207,7 @@ final class P11SecretKeyFactory extends SecretKeyFactorySpi {
             throw new InvalidKeyException("Encoded format must be RAW");
         }
         byte[] encoded = key.getEncoded();
+        System.out.println("P11SecretKeyFactory -> convertKey -> creating key...");
         p11Key = createKey(token, encoded, algo, algoType, extraAttrs);
         token.secretCache.put(key, p11Key);
         return p11Key;
@@ -210,47 +229,63 @@ final class P11SecretKeyFactory extends SecretKeyFactorySpi {
         try {
             switch ((int)keyType) {
                 case (int)CKK_DES:
+                    System.out.println("P11SecretKeyFactory -> createKey -> keyTyp is CKK_DES");
                     keyLength =
                         P11KeyGenerator.checkKeySize(CKM_DES_KEY_GEN, n, token);
+                    System.out.println("P11SecretKeyFactory -> createKey -> keyLength is: " + keyLength);
                     fixDESParity(encoded, 0);
                     break;
                 case (int)CKK_DES3:
+                    System.out.println("P11SecretKeyFactory -> createKey -> keyTyp is CKK_DES3");
                     keyLength =
                         P11KeyGenerator.checkKeySize(CKM_DES3_KEY_GEN, n, token);
+                    System.out.println("P11SecretKeyFactory -> createKey -> keyLength is: " + keyLength);
                     fixDESParity(encoded, 0);
                     fixDESParity(encoded, 8);
                     if (keyLength == 112) {
+                        System.out.println("P11SecretKeyFactory -> createKey -> keyLength is 112 and keyType is CKK_DES2.");
                         keyType = CKK_DES2;
                     } else {
+                        System.out.println("P11SecretKeyFactory -> createKey -> keyLength is not 112 and keyType is CKK_DES3.");
                         keyType = CKK_DES3;
                         fixDESParity(encoded, 16);
                     }
                     break;
                 case (int)CKK_AES:
+                    System.out.println("P11SecretKeyFactory -> createKey -> keyTyp is CKK_AES");
                     keyLength =
                         P11KeyGenerator.checkKeySize(CKM_AES_KEY_GEN, n, token);
+                    System.out.println("P11SecretKeyFactory -> createKey -> keyTyp is CKK_AES -> keyLength is: " + keyLength);
                     break;
                 case (int)CKK_RC4:
+                    System.out.println("P11SecretKeyFactory -> createKey -> keyTyp is CKK_RC4");
                     keyLength =
                         P11KeyGenerator.checkKeySize(CKM_RC4_KEY_GEN, n, token);
+                    System.out.println("P11SecretKeyFactory -> createKey -> keyTyp is CKK_RC4 -> keyLength is: " + keyLength);
                     break;
                 case (int)CKK_BLOWFISH:
+                    System.out.println("P11SecretKeyFactory -> createKey -> keyTyp is CKK_BLOWFISH");
                     keyLength =
                         P11KeyGenerator.checkKeySize(CKM_BLOWFISH_KEY_GEN, n,
                         token);
+                    System.out.println("P11SecretKeyFactory -> createKey -> keyTyp is CKK_BLOWFISH -> keyLength is: " + keyLength);
                     break;
                 case (int)CKK_CHACHA20:
+                    System.out.println("P11SecretKeyFactory -> createKey -> keyTyp is CKK_CHACHA20");
                     keyLength = P11KeyGenerator.checkKeySize(
                         CKM_CHACHA20_KEY_GEN, n, token);
+                    System.out.println("P11SecretKeyFactory -> createKey -> keyTyp is CKK_CHACHA20 -> keyLength is: " + keyLength);
                     break;
                 case (int)CKK_GENERIC_SECRET:
                 case (int)PCKK_TLSPREMASTER:
                 case (int)PCKK_TLSRSAPREMASTER:
                 case (int)PCKK_TLSMASTER:
+                    System.out.println("P11SecretKeyFactory -> createKey -> keyTyp is CKK_GENERIC_SECRET/PCKK_TLSPREMASTER/PCKK_TLSRSAPREMASTER/PCKK_TLSMASTER");
                     keyType = CKK_GENERIC_SECRET;
                     break;
                 case (int)PCKK_SSLMAC:
                 case (int)PCKK_HMAC:
+                    System.out.println("P11SecretKeyFactory -> createKey -> keyTyp is PCKK_SSLMAC/PCKK_HMAC");
                     if (n == 0) {
                         throw new InvalidKeyException
                                 ("MAC keys must not be empty");
@@ -258,6 +293,7 @@ final class P11SecretKeyFactory extends SecretKeyFactorySpi {
                     keyType = CKK_GENERIC_SECRET;
                     break;
                 default:
+                    System.out.println("P11SecretKeyFactory -> createKey -> keyTyp is unknown");
                     throw new InvalidKeyException("Unknown algorithm " +
                             algorithm);
             }
@@ -284,6 +320,7 @@ final class P11SecretKeyFactory extends SecretKeyFactorySpi {
                 (O_IMPORT, CKO_SECRET_KEY, keyType, attributes);
             session = token.getObjSession();
             long keyID = token.p11.C_CreateObject(session.id(), attributes);
+            System.out.println("P11SecretKeyFactory -> createKey -> algorithm is: " + algorithm);
             P11Key p11Key = (P11Key)P11Key.secretKey
                 (session, keyID, algorithm, keyLength, attributes);
             return p11Key;

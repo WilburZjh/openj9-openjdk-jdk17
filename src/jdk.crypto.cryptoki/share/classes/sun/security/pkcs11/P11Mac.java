@@ -207,6 +207,7 @@ final class P11Mac extends MacSpi {
                 ("Parameters not supported");
         }
         reset(true);
+        System.out.println("P11Mac -> engineInit -> algorithm is: " + algorithm);
         p11Key = P11SecretKeyFactory.convertKey(token, key, algorithm);
         try {
             initialize();
