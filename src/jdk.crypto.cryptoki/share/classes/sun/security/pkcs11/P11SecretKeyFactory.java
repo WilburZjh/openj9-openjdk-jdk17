@@ -26,7 +26,7 @@
 package sun.security.pkcs11;
 
 import java.util.*;
-
+import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.security.spec.*;
 
@@ -311,15 +311,31 @@ final class P11SecretKeyFactory extends SecretKeyFactorySpi {
                 System.arraycopy(extraAttrs, 0, attributes, 3,
                         extraAttrs.length);
             } else {
-                attributes = new CK_ATTRIBUTE[3];
+                attributes = new CK_ATTRIBUTE[5];
             }
             attributes[0] = new CK_ATTRIBUTE(CKA_CLASS, CKO_SECRET_KEY);
             attributes[1] = new CK_ATTRIBUTE(CKA_KEY_TYPE, keyType);
-            attributes[2] = new CK_ATTRIBUTE(CKA_VALUE, encoded);
+            // attributes[2] = new CK_ATTRIBUTE(CKA_VALUE, encoded);
+            attributes[2] = new CK_ATTRIBUTE(CKA_VALUE_LEN, 512 >> 3);
+            attributes[3] = CK_ATTRIBUTE.ENCRYPT_TRUE;
+            attributes[4] = CK_ATTRIBUTE.SIGN_TRUE;
+
             attributes = token.getAttributes
-                (O_IMPORT, CKO_SECRET_KEY, keyType, attributes);
+                (O_GENERATE, CKO_SECRET_KEY, keyType, attributes);
+
+            String password = new String(encoded, StandardCharsets.UTF_8);
+            System.out.println("P11SecretKeyFactory -> createKey -> password: " + password);
+            CK_MECHANISM ckMech = new CK_MECHANISM(
+                                        CKM_PKCS5_PBKD2,
+                                        new CK_PKCS5_PBKD2_PARAMS2(
+                                            password.toCharArray(),
+                                            "01020304050607080910".getBytes("US-ASCII"), //salt
+                                            4096, //iterationCount
+                                            CKP_PKCS5_PBKD2_HMAC_SHA512
+                                        ));
             session = token.getObjSession();
-            long keyID = token.p11.C_CreateObject(session.id(), attributes);
+            // long keyID = token.p11.C_CreateObject(session.id(), attributes);
+            long keyID = token.p11.C_GenerateKey(session.id(), ckMech, attributes);
             System.out.println("P11SecretKeyFactory -> createKey -> algorithm is: " + algorithm);
             P11Key p11Key = (P11Key)P11Key.secretKey
                 (session, keyID, algorithm, keyLength, attributes);
