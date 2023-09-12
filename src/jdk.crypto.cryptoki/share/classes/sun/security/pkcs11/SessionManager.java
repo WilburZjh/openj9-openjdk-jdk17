@@ -216,6 +216,7 @@ final class SessionManager {
     }
 
     private Session openSession() throws PKCS11Exception {
+        System.out.println("SessionManager -> openSession -> maxSessions is: " + maxSessions + ", activeSessions are :" + activeSessions.get());
         if ((maxSessions != Integer.MAX_VALUE) &&
                 (activeSessions.get() >= maxSessions)) {
             throw new ProviderException("No more sessions available");
