@@ -118,7 +118,7 @@ public class PKCS11 {
      * e.g. pk2priv.dll.
      */
     private final String pkcs11ModulePath;
-
+    private final CK_VERSION version;
     private long pNativeData;
 
     /**
@@ -199,13 +199,30 @@ public class PKCS11 {
      * path, if the driver is not in the system's search path.
      *
      * @param pkcs11ModulePath the PKCS#11 library path
+     * @param functionList the method name for retrieving the PKCS#11
+     *         function list; may be null if not set in config file
      * @preconditions (pkcs11ModulePath <> null)
      * @postconditions
      */
-    PKCS11(String pkcs11ModulePath, String functionListName)
+    PKCS11(String pkcs11ModulePath, String functionList)
             throws IOException {
-        connect(pkcs11ModulePath, functionListName);
+        this.version = connect(pkcs11ModulePath, functionList);
         this.pkcs11ModulePath = pkcs11ModulePath;
+        // bug in native PKCS#11 lib; workaround it by calling C_GetInfo()
+        // and get cryptoki version from there
+        if (this.version.major != 2 && this.version.major != 3) {
+            try {
+                CK_INFO p11Info = C_GetInfo();
+                this.version.major = p11Info.cryptokiVersion.major;
+                this.version.minor = p11Info.cryptokiVersion.minor;
+            } catch (PKCS11Exception e) {
+                // give up; just use what is returned by connect()
+            }
+        }
+    }
+
+    public CK_VERSION getVersion() {
+        return version;
     }
 
     public static synchronized PKCS11 getInstance(String pkcs11ModulePath,
@@ -244,10 +261,13 @@ public class PKCS11 {
      * native part.
      *
      * @param pkcs11ModulePath The PKCS#11 library path.
+     * @param functionList the method name for retrieving the PKCS#11
+     *         function list; may be null if not set in config file
+     * @return the actual PKCS11 interface version
      * @preconditions (pkcs11ModulePath <> null)
      * @postconditions
      */
-    private native void connect(String pkcs11ModulePath, String functionListName)
+    private native CK_VERSION connect(String pkcs11ModulePath, String functionList)
             throws IOException;
 
     /**
