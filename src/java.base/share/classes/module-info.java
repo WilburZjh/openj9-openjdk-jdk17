@@ -164,7 +164,8 @@ module java.base {
         jdk.jlink,
         jdk.jfr,
         jdk.net,
-        jdk.incubator.foreign;
+        jdk.incubator.foreign,
+        jdk.crypto.cryptoki;
     exports jdk.internal.access.foreign to
         jdk.incubator.foreign;
     exports jdk.internal.event to

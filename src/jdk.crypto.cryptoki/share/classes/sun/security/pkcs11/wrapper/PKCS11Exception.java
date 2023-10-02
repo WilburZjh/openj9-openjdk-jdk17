@@ -102,7 +102,7 @@ public class PKCS11Exception extends Exception {
             RV.CKR_CRYPTOKI_ALREADY_INITIALIZED.value;
 
     // enum for all PKCS#11 return value
-    public static enum RV {
+    static enum RV {
         CKR_OK(0x00000000L),
         CKR_CANCEL(0x00000001L),
         CKR_HOST_MEMORY(0x00000002L),
