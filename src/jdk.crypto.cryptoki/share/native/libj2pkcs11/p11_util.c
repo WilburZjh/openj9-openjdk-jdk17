@@ -136,6 +136,19 @@ CK_FUNCTION_LIST_PTR getFunctionList(JNIEnv *env, jobject pkcs11Implementation) 
     return ckpFunctions;
 }
 
+CK_FUNCTION_LIST_3_0_PTR getFunctionList30(JNIEnv *env, jobject
+        pkcs11Implementation) {
+    ModuleData *moduleData;
+    CK_FUNCTION_LIST_3_0_PTR ckpFunctions30;
+
+    moduleData = getModuleEntry(env, pkcs11Implementation);
+    if (moduleData == NULL) {
+        throwDisconnectedRuntimeException(env);
+        return NULL;
+    }
+    ckpFunctions30 = moduleData->ckFunctionList30Ptr;
+    return ckpFunctions30;
+}
 
 /*
  * Returns 1, if the given pkcs11Implementation is in the list.
@@ -724,7 +737,7 @@ void jCharArrayToCKUTF8CharArray(JNIEnv *env, const jcharArray jArray, CK_UTF8CH
 
     *ckpArray = (CK_UTF8CHAR_PTR) calloc(*ckpLength, sizeof(CK_UTF8CHAR));
     if (*ckpArray == NULL) {
-        p11ThrowOutOfMemoryError(env, 0);
+        throwOutOfMemoryError(env, 0);
         goto cleanup;
     }
     for (i=0; i<(*ckpLength); i++) {
