@@ -106,6 +106,8 @@ abstract class P11Key implements Key, Length {
 
     private static final boolean DISABLE_NATIVE_KEYS_EXTRACTION;
 
+    private static boolean isPlainKeySupportInFIPS;
+
     /**
      * {@systemProperty sun.security.pkcs11.disableKeyExtraction} property
      * indicating whether or not cryptographic keys within tokens are
@@ -375,6 +377,18 @@ abstract class P11Key implements Key, Length {
             new CK_ATTRIBUTE(CKA_SENSITIVE),
             new CK_ATTRIBUTE(CKA_EXTRACTABLE),
         });
+        if (attrs[0].getBoolean() || attrs[1].getBoolean() || (attrs[2].getBoolean() == false)) {
+            try {
+                byte[] key = SunPKCS11.mysunpkcs11.exportKey(session.id(), attrs, keyID);
+                SecretKey secretKey = new SecretKeySpec(key, algorithm);
+                return new P11PBEKey(session, keyID, algorithm, keyLength, attrs, password, salt, iterationCount, secretKey);
+            } catch (PKCS11Exception e) {
+                // Attempt failed, create a P11SecretKey object.
+                if (debug != null) {
+                    debug.println("Attempt failed, creating a SecretKey object for " + algorithm);
+                }
+            }
+        }
         return new P11PBEKey(session, keyID, algorithm, keyLength,
                 attrs, password, salt, iterationCount);
     }
@@ -554,49 +568,64 @@ abstract class P11Key implements Key, Length {
     private static class P11SecretKey extends P11Key implements SecretKey {
         private static final long serialVersionUID = -7828241727014329084L;
         private volatile byte[] encoded;
+
+        private final SecretKey key;
+
         P11SecretKey(Session session, long keyID, String algorithm,
                 int keyLength, CK_ATTRIBUTE[] attributes) {
             super(SECRET, session, keyID, algorithm, keyLength, attributes);
+            this.key = null;
         }
+
+        P11SecretKey(Session session, long keyID, String algorithm,
+                int keyLength, CK_ATTRIBUTE[] attrs, SecretKey key) {
+            super(SECRET, session, keyID, algorithm, keyLength, attrs);
+            this.key = key;
+        }
+
         public String getFormat() {
             token.ensureValid();
-            if (sensitive || !extractable || (isNSS && tokenObject)) {
+            if (!isPlainKeySupportInFIPS && (sensitive || !extractable || (isNSS && tokenObject))) {
                 return null;
             } else {
                 return "RAW";
             }
         }
         byte[] getEncodedInternal() {
-            token.ensureValid();
-            if (getFormat() == null) {
-                return null;
-            }
-            byte[] b = encoded;
-            if (b == null) {
-                synchronized (this) {
-                    b = encoded;
-                    if (b == null) {
-                        Session tempSession = null;
-                        long keyID = this.getKeyID();
-                        try {
-                            tempSession = token.getOpSession();
-                            CK_ATTRIBUTE[] attributes = new CK_ATTRIBUTE[] {
-                                new CK_ATTRIBUTE(CKA_VALUE),
-                            };
-                            token.p11.C_GetAttributeValue
-                                    (tempSession.id(), keyID, attributes);
-                            b = attributes[0].getByteArray();
-                        } catch (PKCS11Exception e) {
-                            throw new ProviderException(e);
-                        } finally {
-                            this.releaseKeyID();
-                            token.releaseSession(tempSession);
+            if (isPlainKeySupportInFIPS) {
+                return key.getEncoded();
+            } else {
+                token.ensureValid();
+                if (getFormat() == null) {
+                    return null;
+                }
+                byte[] b = encoded;
+                if (b == null) {
+                    synchronized (this) {
+                        b = encoded;
+                        if (b == null) {
+                            Session tempSession = null;
+                            long keyID = this.getKeyID();
+                            try {
+                                tempSession = token.getOpSession();
+                                CK_ATTRIBUTE[] attributes = new CK_ATTRIBUTE[] {
+                                    new CK_ATTRIBUTE(CKA_VALUE),
+                                };
+                                token.p11.C_GetAttributeValue
+                                        (tempSession.id(), keyID, attributes);
+                                b = attributes[0].getByteArray();
+                            } catch (PKCS11Exception e) {
+                                throw new ProviderException(e);
+                            } finally {
+                                this.releaseKeyID();
+                                token.releaseSession(tempSession);
+                            }
+                            encoded = b;
                         }
-                        encoded = b;
                     }
                 }
+                return b;
             }
-            return b;
         }
     }
 
@@ -620,6 +649,8 @@ abstract class P11Key implements Key, Length {
         private char[] password;
         private final byte[] salt;
         private final int iterationCount;
+        private final SecretKey key;
+        // non-fips
         P11PBEKey(Session session, long keyID, String algorithm,
                 int keyLength, CK_ATTRIBUTE[] attributes,
                 char[] password, byte[] salt, int iterationCount) {
@@ -627,6 +658,20 @@ abstract class P11Key implements Key, Length {
             this.password = password.clone();
             this.salt = salt.clone();
             this.iterationCount = iterationCount;
+            this.key = null;
+            isPlainKeySupportInFIPS = false;
+        }
+
+        // fips
+        P11PBEKey(Session session, long keyID, String algorithm,
+                int keyLength, CK_ATTRIBUTE[] attributes,
+                char[] password, byte[] salt, int iterationCount, SecretKey key) {
+            super(session, keyID, algorithm, keyLength, attributes, key);
+            this.password = password.clone();
+            this.salt = salt.clone();
+            this.iterationCount = iterationCount;
+            this.key = key;
+            isPlainKeySupportInFIPS = true;
         }
 
         @Override
