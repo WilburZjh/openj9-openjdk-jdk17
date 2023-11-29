@@ -579,7 +579,7 @@ public final class SunPKCS11 extends AuthProvider {
                 }
                 try {
                     keyBytes = ECUtil.generateECPrivateKey(
-                        ckAttrsMap.getOrDefault(CKA_VALUE, new CK_ATTRIBUTE(CKA_VALUE, BigInteger.ZERO)).getBigInteger(),
+                        getBigIntegerOrZero(ckAttrsMap, CKA_VALUE),
                         ECUtil.getECParameterSpec(
                             Security.getProvider("SunEC"),
                             ckaECParams.getByteArray())
