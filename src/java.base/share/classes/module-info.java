@@ -325,7 +325,8 @@ module java.base {
         jdk.naming.dns;
     exports sun.security.pkcs to
         jdk.crypto.ec,
-        jdk.jartool;
+        jdk.jartool,
+        openjceplus;
     exports sun.security.provider to
         java.rmi,
         java.security.jgss,
@@ -362,7 +363,8 @@ module java.base {
     exports sun.security.x509 to
         jdk.crypto.ec,
         jdk.crypto.cryptoki,
-        jdk.jartool;
+        jdk.jartool,
+        openjceplus;
     exports sun.security.validator to
         jdk.jartool;
     exports sun.util.cldr to
