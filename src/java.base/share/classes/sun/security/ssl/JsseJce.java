@@ -165,8 +165,15 @@ final class JsseJce {
 
         static {
             boolean mediator = true;
-            try {
-                Signature.getInstance(SIGNATURE_ECDSA);
+            try { 
+                // When running in FIPS mode the signature SHA1withECDSA is not 
+                // available by default. In this scenario we should still set EC 
+                // availability to true since other algorithms in the ECDSA signature 
+                // family are available for use.
+                if (RestrictedSecurity.isFIPSEnabled() == false) {
+                    Signature.getInstance(SIGNATURE_ECDSA);
+                }
+
                 Signature.getInstance(SIGNATURE_RAWECDSA);
                 KeyAgreement.getInstance("ECDH");
                 KeyFactory.getInstance("EC");
