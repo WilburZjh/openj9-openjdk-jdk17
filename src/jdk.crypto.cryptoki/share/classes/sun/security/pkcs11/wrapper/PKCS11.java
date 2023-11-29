@@ -192,6 +192,96 @@ public class PKCS11 {
             }
             return super.C_CreateObject(hSession, pTemplate);
         }
+
+        // Overriding the JNI method C_GetAttributeValue so that first check if FIPS mode is on and the object is a
+        // secret or a RSA/EC private key, in which case invoke the export method in SunPKCS11 provider to export the
+        // secret pr a RSA/EC private key into the PKCS11 device.
+        @Override
+        public synchronized void C_GetAttributeValue(long hSession, long hObject,
+            CK_ATTRIBUTE[] pTemplate) throws PKCS11Exception {
+            if (mysunpkcs11 != null) {
+                Map<Long, CK_ATTRIBUTE> sensitiveAttrs = new HashMap<>();
+                List<CK_ATTRIBUTE> nonSensitiveAttrs = new LinkedList<>();
+                getAttributesBySensitivity(pTemplate, sensitiveAttrs, nonSensitiveAttrs);
+
+                try {
+                    if (sensitiveAttrs.size() > 0) {
+                        long keyClass = -1L;
+                        long keyType = -1L;
+                        try {
+                            // Secret and private keys have both class and type
+                            // attributes, so we can query them at once.
+                            CK_ATTRIBUTE[] queryAttrs = new CK_ATTRIBUTE[]{
+                                    new CK_ATTRIBUTE(CKA_CLASS),
+                                    new CK_ATTRIBUTE(CKA_KEY_TYPE),
+                            };
+                            super.C_GetAttributeValue(hSession, hObject, queryAttrs);
+                            keyClass = queryAttrs[0].getLong();
+                            keyType = queryAttrs[1].getLong();
+                        } catch (PKCS11Exception e) {
+                            // If the query fails, the object is neither a secret nor a
+                            // private key. As this case won't be handled with the FIPS
+                            // Key Exporter, we keep keyClass initialized to -1L.
+                        }
+                        if (keyClass == CKO_SECRET_KEY || keyClass == CKO_PRIVATE_KEY) {
+                            if (keyClass == CKO_SECRET_KEY) {
+                                if (sensitiveAttrs.size() > 0) {
+                                    CK_ATTRIBUTE[] pSensitiveAttrs =
+                                        new CK_ATTRIBUTE[sensitiveAttrs.size()];
+                                    int i = 0;
+                                    for (CK_ATTRIBUTE sensAttr : sensitiveAttrs.values()) {
+                                        pSensitiveAttrs[i++] = sensAttr;
+                                    }
+                                    sensitiveAttrs.get(CKA_VALUE).pValue = mysunpkcs11.exportKey(hSession, pSensitiveAttrs, hObject);
+                                }
+                            }
+                            if (nonSensitiveAttrs.size() > 0) {
+                                CK_ATTRIBUTE[] pNonSensitiveAttrs =
+                                        new CK_ATTRIBUTE[nonSensitiveAttrs.size()];
+                                int i = 0;
+                                for (CK_ATTRIBUTE nonSensAttr : nonSensitiveAttrs) {
+                                    pNonSensitiveAttrs[i++] = nonSensAttr;
+                                }
+                                super.C_GetAttributeValue(hSession, hObject,
+                                        pNonSensitiveAttrs);
+                                // libj2pkcs11 allocates new CK_ATTRIBUTE objects, so we
+                                // update the reference on the previous CK_ATTRIBUTEs
+                                i = 0;
+                                for (CK_ATTRIBUTE nonSensAttr : nonSensitiveAttrs) {
+                                    nonSensAttr.pValue = pNonSensitiveAttrs[i++].pValue;
+                                }
+                            }
+                            return;
+                        }
+                    }
+                    super.C_GetAttributeValue(hSession, hObject, pTemplate);
+                } catch (Throwable t) {
+                    if (t instanceof PKCS11Exception) {
+                        throw (PKCS11Exception)t;
+                    }
+                    throw new PKCS11Exception(CKR_GENERAL_ERROR,
+                            t.getMessage());
+                }
+            }
+            super.C_GetAttributeValue(hSession, hObject, pTemplate);
+        }
+
+        private static void getAttributesBySensitivity(CK_ATTRIBUTE[] pTemplate,
+            Map<Long, CK_ATTRIBUTE> sensitiveAttrs,
+            List<CK_ATTRIBUTE> nonSensitiveAttrs) {
+            for (CK_ATTRIBUTE attr : pTemplate) {
+                long type = attr.type;
+                // Aligned with NSS' sftk_isSensitive in lib/softoken/pkcs11u.c
+                if (type == CKA_VALUE || type == CKA_PRIVATE_EXPONENT ||
+                        type == CKA_PRIME_1 || type == CKA_PRIME_2 ||
+                        type == CKA_EXPONENT_1 || type == CKA_EXPONENT_2 ||
+                        type == CKA_COEFFICIENT) {
+                    sensitiveAttrs.put(type, attr);
+                } else {
+                    nonSensitiveAttrs.add(attr);
+                }
+            }
+        }
     }
 
     /**

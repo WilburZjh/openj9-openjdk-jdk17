@@ -496,7 +496,7 @@ public final class SunPKCS11 extends AuthProvider {
         return System.identityHashCode(this);
     }
 
-    byte[] exportKey(long hSession, CK_ATTRIBUTE[] attributes, long keyId) throws PKCS11Exception {
+    public byte[] exportKey(long hSession, CK_ATTRIBUTE[] attributes, long keyId) throws PKCS11Exception {
         // Generating the secret key that will be used for wrapping and unwrapping.
         CK_ATTRIBUTE[] wrapKeyAttributes = token.getAttributes(TemplateManager.O_GENERATE, CKO_SECRET_KEY, CKK_AES, new CK_ATTRIBUTE[] { new CK_ATTRIBUTE(CKA_CLASS, CKO_SECRET_KEY), new CK_ATTRIBUTE(CKA_VALUE_LEN, 256 >> 3) });
         Session wrapKeyGenSession = token.getObjSession();
