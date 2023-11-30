@@ -31,6 +31,8 @@ import java.security.interfaces.RSAPublicKey;
 import java.security.spec.*;
 import javax.crypto.*;
 
+import openj9.internal.security.RestrictedSecurity;
+
 /**
  * This class contains a few static methods for interaction with the JCA/JCE
  * to obtain implementations, etc.
