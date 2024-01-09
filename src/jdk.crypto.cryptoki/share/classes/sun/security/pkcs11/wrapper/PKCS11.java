@@ -60,8 +60,14 @@ import java.util.function.Consumer;
 
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.security.interfaces.ECPrivateKey;
+import java.security.interfaces.RSAPrivateCrtKey;
+import java.security.interfaces.RSAPrivateKey;
 
+import sun.security.rsa.RSAUtil.KeyType;
+import sun.security.rsa.RSAPrivateCrtKeyImpl;
 import sun.security.util.Debug;
+import sun.security.util.ECUtil;
 import sun.security.pkcs11.SunPKCS11;
 
 import static sun.security.pkcs11.wrapper.PKCS11Constants.*;
@@ -187,6 +193,7 @@ public class PKCS11 {
         // into the PKCS11 device.
         @Override
         public synchronized long C_CreateObject(long hSession, CK_ATTRIBUTE[] pTemplate) throws PKCS11Exception {
+            System.out.println("InnerPKCS11 C_CreateObject");
             if ((mysunpkcs11 != null) && isKey(pTemplate)) {
                 return mysunpkcs11.importKey(hSession, pTemplate);
             }
@@ -194,11 +201,15 @@ public class PKCS11 {
         }
 
         // Overriding the JNI method C_GetAttributeValue so that first check if FIPS mode is on and the object is a
-        // secret or a RSA/EC private key, in which case invoke the export method in SunPKCS11 provider to export the
-        // secret pr a RSA/EC private key into the PKCS11 device.
+        // secret or a private key, in which case invoke the export method in SunPKCS11 provider to export the
+        // secret or a private key into the PKCS11 device.
         @Override
         public synchronized void C_GetAttributeValue(long hSession, long hObject,
             CK_ATTRIBUTE[] pTemplate) throws PKCS11Exception {
+            
+            System.out.println("InnerPKCS11 C_GetAttributeValue");
+            // We only support to export secret keys, RSA and EC private keys.
+            // Other keys will still be processed by the native C_GetAttributeValue() function.
             if (mysunpkcs11 != null) {
                 Map<Long, CK_ATTRIBUTE> sensitiveAttrs = new HashMap<>();
                 List<CK_ATTRIBUTE> nonSensitiveAttrs = new LinkedList<>();
@@ -216,39 +227,74 @@ public class PKCS11 {
                                     new CK_ATTRIBUTE(CKA_KEY_TYPE),
                             };
                             super.C_GetAttributeValue(hSession, hObject, queryAttrs);
+
+                            // Try to get the key info.
                             keyClass = queryAttrs[0].getLong();
                             keyType = queryAttrs[1].getLong();
                         } catch (PKCS11Exception e) {
                             // If the query fails, the object is neither a secret nor a
-                            // private key. As this case won't be handled with the FIPS
-                            // Key Exporter, we keep keyClass initialized to -1L.
+                            // private key. We dont export public key via exportKey.
                         }
                         if (keyClass == CKO_SECRET_KEY || keyClass == CKO_PRIVATE_KEY) {
+                            CK_ATTRIBUTE[] pSensitiveAttrs =
+                                    new CK_ATTRIBUTE[sensitiveAttrs.size()];
+                            int i = 0;
+                            for (CK_ATTRIBUTE sensAttr : sensitiveAttrs.values()) {
+                                pSensitiveAttrs[i++] = sensAttr;
+                            }
+                            byte[] key = mysunpkcs11.exportKey(hSession, pSensitiveAttrs, hObject);
+                            
                             if (keyClass == CKO_SECRET_KEY) {
-                                if (sensitiveAttrs.size() > 0) {
-                                    CK_ATTRIBUTE[] pSensitiveAttrs =
-                                        new CK_ATTRIBUTE[sensitiveAttrs.size()];
-                                    int i = 0;
-                                    for (CK_ATTRIBUTE sensAttr : sensitiveAttrs.values()) {
-                                        pSensitiveAttrs[i++] = sensAttr;
+                                sensitiveAttrs.get(CKA_VALUE).pValue = key;
+                            } else if (keyClass == CKO_PRIVATE_KEY) {
+                                if (keyType == CKK_RSA) {
+                                    RSAPrivateKey rsaPrivKey = RSAPrivateCrtKeyImpl.newKey(KeyType.RSA, "PKCS#8", key);
+                                    CK_ATTRIBUTE attr;
+                                    if ((attr = sensitiveAttrs.get(CKA_PRIVATE_EXPONENT)) != null) {
+                                        attr.pValue = rsaPrivKey.getPrivateExponent().toByteArray();
                                     }
-                                    sensitiveAttrs.get(CKA_VALUE).pValue = mysunpkcs11.exportKey(hSession, pSensitiveAttrs, hObject);
+                                    if (rsaPrivKey instanceof RSAPrivateCrtKey) {
+                                        RSAPrivateCrtKey rsaPCrtKey = (RSAPrivateCrtKey) rsaPrivKey;
+                                        if ((attr = sensitiveAttrs.get(CKA_PRIME_1)) != null) {
+                                            attr.pValue = rsaPCrtKey.getPrimeP().toByteArray();
+                                        }
+                                        if ((attr = sensitiveAttrs.get(CKA_PRIME_2)) != null) {
+                                            attr.pValue = rsaPCrtKey.getPrimeQ().toByteArray();
+                                        }
+                                        if ((attr = sensitiveAttrs.get(CKA_EXPONENT_1)) != null) {
+                                            attr.pValue = rsaPCrtKey.getPrimeExponentP().toByteArray();
+                                        }
+                                        if ((attr = sensitiveAttrs.get(CKA_EXPONENT_2)) != null) {
+                                            attr.pValue = rsaPCrtKey.getPrimeExponentQ().toByteArray();
+                                        }
+                                        if ((attr = sensitiveAttrs.get(CKA_COEFFICIENT)) != null) {
+                                            attr.pValue = rsaPCrtKey.getCrtCoefficient().toByteArray();
+                                        }
+                                    }
+                                } else if (keyType == CKK_EC) {
+                                    System.out.println("This hObject is a EC privateKey.");
+                                    sensitiveAttrs.get(CKA_VALUE).pValue = ECUtil.decodePKCS8ECPrivateKey(key).getS().toByteArray();
+                                } else {
+                                    System.out.println("This hObject is neither a RSA/EC privateKey.");
+                                    super.C_GetAttributeValue(hSession, hObject, pTemplate);
+                                    return;
                                 }
                             }
                             if (nonSensitiveAttrs.size() > 0) {
+                                System.out.println("nonSensitiveAttrs size is: " + nonSensitiveAttrs.size());
                                 CK_ATTRIBUTE[] pNonSensitiveAttrs =
                                         new CK_ATTRIBUTE[nonSensitiveAttrs.size()];
-                                int i = 0;
+                                int j = 0;
                                 for (CK_ATTRIBUTE nonSensAttr : nonSensitiveAttrs) {
-                                    pNonSensitiveAttrs[i++] = nonSensAttr;
+                                    pNonSensitiveAttrs[j++] = nonSensAttr;
                                 }
                                 super.C_GetAttributeValue(hSession, hObject,
                                         pNonSensitiveAttrs);
                                 // libj2pkcs11 allocates new CK_ATTRIBUTE objects, so we
                                 // update the reference on the previous CK_ATTRIBUTEs
-                                i = 0;
+                                j = 0;
                                 for (CK_ATTRIBUTE nonSensAttr : nonSensitiveAttrs) {
-                                    nonSensAttr.pValue = pNonSensitiveAttrs[i++].pValue;
+                                    nonSensAttr.pValue = pNonSensitiveAttrs[j++].pValue;
                                 }
                             }
                             return;
@@ -271,7 +317,9 @@ public class PKCS11 {
             List<CK_ATTRIBUTE> nonSensitiveAttrs) {
             for (CK_ATTRIBUTE attr : pTemplate) {
                 long type = attr.type;
-                // Aligned with NSS' sftk_isSensitive in lib/softoken/pkcs11u.c
+                // Aligned sftk_isSensitive function from NSS's nss/lib/softoken/pkcs11u.c
+                // to determine if a particular attribute is sensitive.
+                // Only PRIVATE and SECRET KEYS have SENSITIVE values.
                 if (type == CKA_VALUE || type == CKA_PRIVATE_EXPONENT ||
                         type == CKA_PRIME_1 || type == CKA_PRIME_2 ||
                         type == CKA_EXPONENT_1 || type == CKA_EXPONENT_2 ||
@@ -1841,6 +1889,7 @@ static class SynchronizedPKCS11 extends PKCS11 {
 
     public synchronized long C_CreateObject(long hSession,
             CK_ATTRIBUTE[] pTemplate) throws PKCS11Exception {
+        System.out.println("SynchronizedPKCS11 C_CreateObject");
         if ((mysunpkcs11 != null) && isKey(pTemplate)) {
             return mysunpkcs11.importKey(hSession, pTemplate);
         }
@@ -1859,6 +1908,7 @@ static class SynchronizedPKCS11 extends PKCS11 {
 
     public synchronized void C_GetAttributeValue(long hSession, long hObject,
             CK_ATTRIBUTE[] pTemplate) throws PKCS11Exception {
+        System.out.println("SynchronizedPKCS11 C_GetAttributeValue");
         super.C_GetAttributeValue(hSession, hObject, pTemplate);
     }
 

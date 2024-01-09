@@ -446,6 +446,7 @@ abstract class P11Key implements Key, Length {
             try {
                 byte[] key = SunPKCS11.mysunpkcs11.exportKey(session.id(), attrs, keyID);
                 ECPrivateKey ecPrivKey = ECUtil.decodePKCS8ECPrivateKey(key);
+                System.out.println("Generate a P11ECPrivateKeyFIPS key");
                 return new P11ECPrivateKeyFIPS(session, keyID, algorithm, keyLength, attrs, ecPrivKey);
             } catch (PKCS11Exception | InvalidKeySpecException e) {
                 // Attempt failed, create a P11PrivateKey object.
